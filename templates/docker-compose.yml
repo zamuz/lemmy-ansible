@@ -91,5 +91,9 @@ services:
     image: mwader/postfix-relay
     environment:
       - POSTFIX_myhostname={{ domain }}
+      - OPENDKIM_DOMAINS={{ domain }}
+      - TZ=America/Santiago
+    volumes:
+      - ./volumes/opendkim-keys:/etc/opendkim/keys:Z
     restart: "always"
     logging: *default-logging

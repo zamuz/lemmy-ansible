@@ -102,6 +102,8 @@
           owner: "root"
         - path: "{{lemmy_base_dir}}/{{domain}}/volumes/pictrs/"
           owner: "991"
+        - path: "{{lemmy_base_dir}}/{{domain}}/volumes/opendkim-keys/"
+          owner: "root"
 
     - block:
         - set_fact:
