@@ -104,6 +104,8 @@
           owner: "991"
         - path: "{{lemmy_base_dir}}/{{domain}}/volumes/opendkim-keys/"
           owner: "root"
+        - path: "{{lemmy_base_dir}}/{{domain}}/volumes/daily-cron/"
+          owner: "root"
 
     - block:
         - set_fact:
@@ -124,6 +126,9 @@
             - src: "templates/nginx.conf"
               dest: "/etc/nginx/sites-available/{{domain}}.conf"
               mode: "0644"
+            - src: "templates/activity_cleanup"
+              dest: "{{lemmy_base_dir}}/{{domain}}/volumes/daily-cron/activity_cleanup"
+              mode: "0755"
           vars:
             lemmy_docker_image: "dessalines/lemmy:{{ lemmy_version | default( lookup('file', 'VERSION') )}}"
             lemmy_docker_ui_image: "dessalines/lemmy-ui:{{ lemmy_ui_version | default(lemmy_version | default(lookup('file', 'VERSION')))}}"
