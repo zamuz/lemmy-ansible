@@ -104,8 +104,6 @@
           owner: "991"
         - path: "{{lemmy_base_dir}}/{{domain}}/volumes/opendkim-keys/"
           owner: "root"
-        - path: "{{lemmy_base_dir}}/{{domain}}/volumes/daily-cron/"
-          owner: "root"
 
     - block:
         - set_fact:
