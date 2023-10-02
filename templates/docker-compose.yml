@@ -8,7 +8,7 @@ x-logging: &default-logging
 
 services:
   proxy:
-    image: nginx:1-alpine
+    image: docker.io/library/nginx 
     ports:
       # actual and only port facing any connection from outside
       # Note, change the left number if port 1236 is already in use on your system
@@ -16,6 +16,7 @@ services:
       - "{{ lemmy_port }}:8536"
     volumes:
       - ./nginx_internal.conf:/etc/nginx/nginx.conf:ro,Z
+      - ./proxy_params:/etc/nginx/proxy_params:ro,Z
     restart: always
     logging: *default-logging
     depends_on:
@@ -28,7 +29,13 @@ services:
     restart: always
     logging: *default-logging
     environment:
-      - RUST_LOG="warn"
+{% if lemmy_env_vars is defined and lemmy_env_vars|length > 0 %}
+{% for item in lemmy_env_vars %}
+{% for key, value in item.items() %}
+      - {{ key }}={{ value }}
+{% endfor %}
+{% endfor %}
+{% endif %}
     volumes:
       - ./lemmy.hjson:/config/config.hjson:Z
     depends_on:
@@ -38,9 +45,13 @@ services:
   lemmy-ui:
     image: {{ lemmy_docker_ui_image }}
     environment:
-      - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
-      - LEMMY_UI_LEMMY_EXTERNAL_HOST={{ domain }}
-      - LEMMY_UI_HTTPS=true
+{% if lemmyui_env_vars is defined and lemmyui_env_vars|length > 0 %}
+{% for item in lemmyui_env_vars %}
+{% for key, value in item.items() %}
+      - {{ key }}={{ value }}
+{% endfor %}
+{% endfor %}
+{% endif %}
     volumes:
       - ./volumes/lemmy-ui/extra_themes:/app/extra_themes
     depends_on:
@@ -49,21 +60,19 @@ services:
     logging: *default-logging
 
   pictrs:
-    image: asonix/pictrs:0.4.0
+    image: docker.io/asonix/pictrs:0.4.0
     # this needs to match the pictrs url in lemmy.hjson
     hostname: pictrs
     # we can set options to pictrs like this, here we set max. image size and forced format for conversion
     # entrypoint: /sbin/tini -- /usr/local/bin/pict-rs -p /mnt -m 4 --image-format webp
     environment:
-      - PICTRS_OPENTELEMETRY_URL=http://otel:4137
-      - PICTRS__API_KEY={{ postgres_password }}
-      - RUST_LOG=debug
-      - RUST_BACKTRACE=full
-      - PICTRS__MEDIA__VIDEO_CODEC=vp9
-      - PICTRS__MEDIA__GIF__MAX_WIDTH=256
-      - PICTRS__MEDIA__GIF__MAX_HEIGHT=256
-      - PICTRS__MEDIA__GIF__MAX_AREA=65536
-      - PICTRS__MEDIA__GIF__MAX_FRAME_COUNT=400
+{% if pictrs_env_vars is defined and pictrs_env_vars|length > 0 %}
+{% for item in pictrs_env_vars %}
+{% for key, value in item.items() %}
+      - {{ key }}={{ value }}
+{% endfor %}
+{% endfor %}
+{% endif %}
     user: 991:991
     volumes:
       - ./volumes/pictrs:/mnt:Z
@@ -75,12 +84,16 @@ services:
           memory: 690m
 
   postgres:
-    image: postgres:15-alpine
+    image: docker.io/postgres:15-alpine
     hostname: postgres
     environment:
-      - POSTGRES_USER=lemmy
-      - POSTGRES_PASSWORD={{ postgres_password }}
-      - POSTGRES_DB=lemmy
+{% if postgres_env_vars is defined and postgres_env_vars|length > 0 %}
+{% for item in postgres_env_vars %}
+{% for key, value in item.items() %}
+      - {{ key }}={{ value }}
+{% endfor %}
+{% endfor %}
+{% endif %}
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data:Z
       - ./customPostgresql.conf:/etc/postgresql.conf
@@ -88,11 +101,15 @@ services:
     logging: *default-logging
 
   postfix:
-    image: mwader/postfix-relay
+    image: docker.io/mwader/postfix-relay
     environment:
-      - POSTFIX_myhostname={{ domain }}
-      - OPENDKIM_DOMAINS={{ domain }}
-      - TZ=America/Santiago
+{% if postfix_env_vars is defined and postfix_env_vars|length > 0 %}
+{% for item in postfix_env_vars %}
+{% for key, value in item.items() %}
+      - {{ key }}={{ value }}
+{% endfor %}
+{% endfor %}
+{% endif %}
     volumes:
       - ./volumes/opendkim-keys:/etc/opendkim/keys:Z
     restart: "always"

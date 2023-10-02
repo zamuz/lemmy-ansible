@@ -8,4 +8,10 @@ pipeline:
     commands:
       - apk add ansible
       - ansible-playbook lemmy.yml --syntax-check
+      - ansible-playbook lemmy-almalinux.yml --syntax-check
       - ansible-playbook uninstall.yml --syntax-check
+  ansible_lint:
+    image: alpine:3
+    commands:
+      - apk add ansible ansible-lint
+      - ansible-lint --warn-list experimental lemmy.yml lemmy-almalinux.yml uninstall.yml
