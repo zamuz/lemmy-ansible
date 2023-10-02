@@ -35,3 +35,5 @@ lemmyui_env_vars:
 
 postfix_env_vars:
   - POSTFIX_myhostname: "{{ domain }}"
+
+start_docker_compose: True

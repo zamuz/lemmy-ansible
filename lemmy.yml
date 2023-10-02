@@ -244,6 +244,7 @@
         state: present
         pull: true
         remove_orphans: true
+      when: start_docker_compose
 
     - name: Certbot renewal cronjob
       ansible.builtin.cron:
