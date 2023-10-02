@@ -1,3 +1,0 @@
-#!/bin/bash
-query="delete from activity where published < (NOW() - INTERVAL '7 days');"
-PGPASSWORD={{ postgres_password }} /bin/echo "$query" | /usr/local/bin/psql -d lemmy -U lemmy
