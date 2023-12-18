@@ -5,6 +5,14 @@
   vars_files:
     - "inventory/host_vars/{{ domain }}/vars.yml"
   pre_tasks:
+    - name: Assert that Ansible version is >= 2.11.0
+      delegate_to: localhost
+      ansible.builtin.assert:
+        that:
+          - "ansible_version.full is version('2.11.0', '>=')"
+        fail_msg: "This playbook requires Ansible 2.11.0 or higher"
+      become: false
+
     # This is not needed for this playbook as it predates its existence
     # But we're keeping it for funsies :)
     - name: Check lemmy_base_dir
@@ -17,6 +25,7 @@
       ansible.builtin.stat:
         path: "inventory/host_vars/{{ domain }}/passwords/postgres"
       register: postgres_password_file
+      become: false
 
     - name: Legacy use of passwords/postgres file
       delegate_to: localhost
@@ -25,12 +34,14 @@
           In current versions of the Lemmy Ansible playbooks, the passwords/postgres file must be renamed to passwords/postgres.psk.
           See https://github.com/LemmyNet/lemmy-ansible#upgrading
       when: postgres_password_file.stat.exists
+      become: false
 
     - name: Check for vars.yml file
       delegate_to: localhost
       ansible.builtin.stat:
         path: "inventory/host_vars/{{ domain }}/vars.yml"
       register: vars_file
+      become: false
 
     - name: Missing vars.yml file
       delegate_to: localhost
@@ -39,20 +50,26 @@
           Missing vars.yml file, please refer to the installations instructions. See https://github.com/LemmyNet/lemmy-ansible#install
           and https://github.com/LemmyNet/lemmy-ansible#upgrading
       when: not vars_file.stat.exists
+      become: false
   handlers:
     - name: Reload nginx
       ansible.builtin.systemd:
         name: nginx
         state: reloaded
+
+    - name: Reload firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: reloaded
   vars:
     lemmy_port: "{{ 32767 | random(start=1024) }}"
   tasks:
     - name: Ensure target system is >= EL9
-      ansible.builtin.fail:
-        msg: "This playbook requires Enterprise Linux 9 or greater"
-      when:
-        - ansible_distribution not in ['AlmaLinux', 'CentOS', 'RedHat', 'Rocky']
-        - ansible_distribution_major_version | int < 9
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution in ['AlmaLinux', 'CentOS', 'RedHat', 'Rocky']
+          - ansible_distribution_major_version | int >= 9
+        fail_msg: "This playbook requires Enterprise Linux 9 or greater on the target server"
       tags:
         - always
 
@@ -98,21 +115,17 @@
       tags:
         - firewalld
 
-    # TODO: Use ansible.posix.firewalld
     - name: Allow http/httpd traffic to public zone in firewalld
-      ansible.builtin.command: "firewall-cmd --zone=public --add-service={{ item }} --perm"
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        state: enabled
+        zone: public
+        permanent: true
+        immediate: true
       loop:
         - http
         - https
       when: "'firewalld.service' in ansible_facts.services and ansible_facts.services['firewalld.service'].state == 'running'"
-      changed_when: true
-      tags:
-        - firewalld
-
-    - name: Reload firewalld
-      ansible.builtin.command: firewall-cmd --reload
-      when: "'firewalld.service' in ansible_facts.services and ansible_facts.services['firewalld.service'].state == 'running'"
-      changed_when: true
       tags:
         - firewalld
 
@@ -185,9 +198,9 @@
         # src: "files/{{ domain }}/customPostgresql.conf"
         src: "inventory/host_vars/{{ domain }}/customPostgresql.conf"
         dest: "{{ lemmy_base_dir }}/{{ domain }}/customPostgresql.conf"
-        mode: "0600"
-        owner: "1000" # Match UID in container
-        group: "1000" # Match GID in container
+        mode: "0644"
+        owner: root
+        group: root
       tags:
         - configs
         - postgresql
